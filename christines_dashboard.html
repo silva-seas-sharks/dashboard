@@ -631,7 +631,6 @@ function renderLog() {
       '</div>';
     } else {
       var cur=v!==undefined?v:(m.goal||m.best||0);
-      // Use explicit slider ranges per metric type, never go below 0 for things that can't be negative
       var sliderMin, sliderMax, sliderStep;
       if(m.sliderMin!==undefined && m.sliderMax!==undefined){
         sliderMin=m.sliderMin; sliderMax=m.sliderMax;
@@ -644,9 +643,10 @@ function renderLog() {
       }
       sliderStep=m.step||0.5;
       cur=Math.max(sliderMin,Math.min(sliderMax,cur));
+      var touched = v!==undefined; // only show value if already logged
       html+='<div class="srow">'+
         '<input type="range" min="'+sliderMin+'" max="'+sliderMax+'" step="'+sliderStep+'" value="'+cur+'" id="slider_'+m.id+'" oninput="updLog(\''+m.id+'\',+this.value);var ni=document.getElementById(\'ni_'+m.id+'\');if(ni)ni.value=this.value;">'+
-        '<div class="sval" id="sv_'+m.id+'" style="color:'+c+'">'+cur+' <span style="font-size:9px;font-weight:400">'+m.unit+'</span></div>'+
+        '<div class="sval" id="sv_'+m.id+'" style="color:'+(touched?c:'var(--muted)')+'">'+(touched?cur:'—')+' <span style="font-size:9px;font-weight:400">'+m.unit+'</span></div>'+
       '</div>'+
       '<input type="number" id="ni_'+m.id+'" placeholder="Type exact..." step="'+sliderStep+'" min="'+sliderMin+'" oninput="updLog(\''+m.id+'\',+this.value);var sl=document.getElementById(\'slider_'+m.id+'\');if(sl)sl.value=Math.min('+sliderMax+',Math.max('+sliderMin+',+this.value));">';
     }
@@ -666,6 +666,24 @@ function updLog(id,val){
     var sval=document.getElementById('sv_'+id);
     if(badge){badge.style.background=c;badge.textContent=Math.round(sc)+'/10';}
     if(sval){sval.style.color=c;sval.innerHTML=val+' <span style="font-size:9px;font-weight:400">'+m.unit+'</span>';}
+    // Show badge if not already visible
+    if(badge===null){
+      var top=document.querySelector('#lc-badge-'+id);
+      if(!top){
+        var lctop=document.getElementById('slider_'+id);
+        if(lctop&&lctop.parentElement&&lctop.parentElement.parentElement){
+          var header=lctop.parentElement.parentElement.querySelector('.lc-top');
+          if(header){
+            var b=document.createElement('div');
+            b.className='lc-badge';
+            b.id='lc-badge-'+id;
+            b.style.background=c;
+            b.textContent=Math.round(sc)+'/10';
+            header.appendChild(b);
+          }
+        }
+      }
+    }
   }
 }
 function setYN(id,val){
@@ -676,8 +694,26 @@ function setYN(id,val){
   if(nBtn) nBtn.classList.toggle('active',val===false);
 }
 function doSave(){
-  var entry={}; for(var k in ls) entry[k]=ls[k];
+  // Only save metrics that have been explicitly set
+  var entry={};
+  var hasAnyData=false;
+  for(var k in ls){
+    if(ls[k]!==undefined && ls[k]!==null && k!=='savedAt'){
+      entry[k]=ls[k];
+      hasAnyData=true;
+    }
+  }
+  if(!hasAnyData){
+    document.getElementById('saveMsg').textContent='Nothing to save — log some values first';
+    setTimeout(function(){document.getElementById('saveMsg').textContent='';},3000);
+    return;
+  }
+  entry.date=logDate;
   entry.savedAt=new Date().toISOString();
+  // Calculate and save overall score
+  var wt=getWeeklyTotals();
+  var ov=calcOverall(entry,wt);
+  if(ov!==null) entry.overall=ov;
   loggedData[logDate]=entry; saveData();
   document.getElementById('saveMsg').textContent='Saved ✓';
   setTimeout(function(){document.getElementById('saveMsg').textContent='';},3000);
@@ -1141,13 +1177,14 @@ function syncSettingsToSheet() {
 }
 
 function migrateLocalToSheet() {
-  // Push any existing local data up to the sheet
   var localData = {};
   try { localData = JSON.parse(localStorage.getItem(SK)||'{}'); } catch(e){}
   var dates = Object.keys(localData).filter(function(k){return k.match(/^\d{4}-\d{2}-\d{2}$/);});
-  if (!dates.length) return;
   dates.forEach(function(date) {
     var entry = localData[date];
+    // Only migrate entries that have real data, not just a savedAt
+    var hasData = Object.keys(entry).filter(function(k){return k!=='savedAt'&&k!=='date'&&entry[k]!==undefined&&entry[k]!==null&&entry[k]!=='';}).length > 0;
+    if (!hasData) return;
     entry.date = date;
     apiCall({action:'saveDay', user:SYNC_USER, day:JSON.stringify(entry)}, function(){});
   });
@@ -1157,6 +1194,14 @@ function migrateLocalToSheet() {
     apiCall({action:'saveSettings', user:SYNC_USER, settings:JSON.stringify(localSettings)}, function(){});
   }
 }
+
+// Auto-poll every 3 minutes so Pi display stays current
+setInterval(function(){
+  syncFromSheet(function(){
+    renderCountdowns();
+    renderToday();
+  });
+}, 3 * 60 * 1000);
 
 
 document.querySelectorAll('.tab').forEach(function(t){
