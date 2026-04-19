@@ -179,7 +179,7 @@ body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg2);fo
         <div id="syncStatus" style="font-size:9px;margin-top:2px;"></div>
     </div>
     <div class="score-badge" id="scoreBadge">
-      <div class="sb-lbl">Today</div>
+      <div class="sb-lbl" id="scoreBadgeLbl">Week</div>
       <div class="sb-val" id="scoreBadgeVal">—</div>
     </div>
   </div>
@@ -371,12 +371,12 @@ var DEFAULT_COUNTDOWNS = [
 ];
 
 var DEFAULT_METRICS = [
-  {id:'cycling',    label:'Cycling',    unit:'mi',      type:'directional', best:60, worst:0, goal:60, sliderMin:0, sliderMax:100, step:0.5, col:'#E63946', isGoalMetric:true},
-  {id:'running',    label:'Running',    unit:'mi',      type:'directional', best:10, worst:0, goal:10, sliderMin:0, sliderMax:26,  step:0.1, col:'#457B9D', isGoalMetric:true},
-  {id:'spanish',    label:'Spanish',    unit:'min',     type:'directional', best:60, worst:0, goal:60, sliderMin:0, sliderMax:120, step:5,   col:'#F4A261', isGoalMetric:true},
-  {id:'upper_body', label:'Upper Body', unit:'sessions',type:'directional', best:2,  worst:0, goal:2,  sliderMin:0, sliderMax:5,   step:1,   col:'#9B5DE5', isGoalMetric:true},
-  {id:'lower_body', label:'Lower Body', unit:'sessions',type:'directional', best:2,  worst:0, goal:2,  sliderMin:0, sliderMax:5,   step:1,   col:'#F77F00', isGoalMetric:true},
-  {id:'mobility',   label:'Mobility',   unit:'sessions',type:'directional', best:3,  worst:0, goal:3,  sliderMin:0, sliderMax:7,   step:1,   col:'#2DC653', isGoalMetric:true}
+  {id:'cycling',    label:'Cycling',    unit:'mi',      type:'directional', best:60, worst:0, goal:60, sliderMin:0, sliderMax:100, step:0.5, col:'#E63946'},
+  {id:'running',    label:'Running',    unit:'mi',      type:'directional', best:10, worst:0, goal:10, sliderMin:0, sliderMax:26,  step:0.1, col:'#457B9D'},
+  {id:'spanish',    label:'Spanish',    unit:'min',     type:'directional', best:60, worst:0, goal:60, sliderMin:0, sliderMax:120, step:5,   col:'#F4A261'},
+  {id:'upper_body', label:'Upper Body', unit:'sessions',type:'directional', best:2,  worst:0, goal:2,  sliderMin:0, sliderMax:5,   step:1,   col:'#9B5DE5'},
+  {id:'lower_body', label:'Lower Body', unit:'sessions',type:'directional', best:2,  worst:0, goal:2,  sliderMin:0, sliderMax:5,   step:1,   col:'#F77F00'},
+  {id:'mobility',   label:'Mobility',   unit:'sessions',type:'directional', best:3,  worst:0, goal:3,  sliderMin:0, sliderMax:7,   step:1,   col:'#2DC653'}
 ];
 
 var DEFAULT_GOAL_BARS = [
@@ -557,13 +557,28 @@ function renderCountdowns() {
 function renderToday() {
   var e = loggedData[today()]||{};
   var wt = getWeeklyTotals();
-  var ov = calcOverall(e, wt);
-  var oc = scoreColor(ov);
+
+  // Badge shows average weekly goal progress %
   var badge = document.getElementById('scoreBadge');
-  badge.style.borderColor = ov!==null?oc:'#bbb';
   var bval = document.getElementById('scoreBadgeVal');
-  bval.style.color = ov!==null?oc:'var(--muted)';
-  bval.textContent = ov!==null?ov:'—';
+  var blbl = document.getElementById('scoreBadgeLbl');
+  if (settings.goalBars && settings.goalBars.length) {
+    var pcts = settings.goalBars.map(function(gb){
+      return Math.min(100, Math.round((wt[gb.metricId]||0) / gb.target * 100));
+    });
+    var avgPct = Math.round(pcts.reduce(function(a,b){return a+b;},0) / pcts.length);
+    var oc = scoreColor(avgPct/10);
+    badge.style.borderColor = oc;
+    bval.style.color = oc;
+    bval.textContent = avgPct + '%';
+    if (blbl) blbl.textContent = 'Week';
+  } else {
+    var ov = calcOverall(e, wt);
+    var oc2 = scoreColor(ov);
+    badge.style.borderColor = ov!==null?oc2:'#bbb';
+    bval.style.color = ov!==null?oc2:'var(--muted)';
+    bval.textContent = ov!==null?ov:'—';
+  }
 
   var nonGoal = settings.metrics.filter(function(m){return !m.isGoalMetric;});
   var html = '';
