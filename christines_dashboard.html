@@ -1041,7 +1041,7 @@ function addMetric(){
   var unit=document.getElementById('mUnit').value.trim();
   var type=document.getElementById('mType').value;
   if(!name) return;
-  var id='m_'+name.toLowerCase().replace(/\s+/g,'_')+'_'+Date.now();
+  var id=name.toLowerCase().replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,'');
   var metric={id:id,label:name,unit:unit,type:type,col:'#888'};
   if(type==='directional'){metric.best=parseFloat(document.getElementById('mBest').value)||0;metric.worst=parseFloat(document.getElementById('mWorst').value)||0;}
   if(type==='middle'){metric.target=parseFloat(document.getElementById('mTarget').value)||0;metric.range=parseFloat(document.getElementById('mRange').value)||15;}
