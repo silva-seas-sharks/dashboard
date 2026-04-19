@@ -1141,11 +1141,16 @@ function syncFromSheet(callback) {
         var freshData = {};
         res2.data.forEach(function(row) {
           if (row.date) {
-            // Strip time portion if date came back as a full timestamp
             var dateKey = String(row.date).slice(0, 10);
             var entry = {};
             Object.keys(row).forEach(function(k){
-              if(row[k]!==''&&row[k]!==null&&row[k]!==undefined) entry[k]=row[k];
+              if(row[k]!==''&&row[k]!==null&&row[k]!==undefined){
+                var v = row[k];
+                // Convert string TRUE/FALSE to booleans
+                if(v==='TRUE'||v===true) v=true;
+                else if(v==='FALSE'||v===false) v=false;
+                entry[k]=v;
+              }
             });
             entry.date = dateKey;
             freshData[dateKey] = entry;
