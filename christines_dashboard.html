@@ -178,9 +178,15 @@ body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg2);fo
       <div class="dash-date" id="dashDate"></div>
         <div id="syncStatus" style="font-size:9px;margin-top:2px;"></div>
     </div>
-    <div class="score-badge" id="scoreBadge">
-      <div class="sb-lbl">Today</div>
-      <div class="sb-val" id="scoreBadgeVal">—</div>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <div class="score-badge" id="scoreBadge">
+        <div class="sb-lbl">Today</div>
+        <div class="sb-val" id="scoreBadgeVal">—</div>
+      </div>
+      <div class="score-badge" id="scoreBadgeWeek">
+        <div class="sb-lbl">Week</div>
+        <div class="sb-val" id="scoreBadgeWeekVal">—</div>
+      </div>
     </div>
   </div>
   <div class="countdowns-row" id="countdownsRow"></div>
@@ -487,20 +493,48 @@ function calcOverall(entry, weeklyTotals) {
 }
 
 // ─── DATE HELPERS ────────────────────────────────────────────────
-function today(){ return new Date().toISOString().slice(0,10); }
+function today(){
+  var d=new Date();
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function localDateStr(d){
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
 function dback(n) {
   if (n===9999) {
     var keys=Object.keys(loggedData).filter(function(k){return k.match(/^\d{4}-\d{2}-\d{2}$/);}).sort();
     if(!keys.length) return [today()];
     var start=new Date(keys[0]+'T12:00:00'),end=new Date(),days=[];
-    for(var d=new Date(start);d<=end;d.setDate(d.getDate()+1)) days.push(new Date(d).toISOString().slice(0,10));
+    for(var d=new Date(start);d<=end;d.setDate(d.getDate()+1)) days.push(localDateStr(new Date(d)));
     return days;
   }
   var days=[];
-  for(var i=n-1;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
+  for(var i=n-1;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(localDateStr(d));}
   return days;
 }
 function wdays(){ return dback(7); }
+// Returns Mon-Sun of current week
+function currentWeekDays(){
+  var days=[];
+  var now=new Date();
+  var dow=now.getDay(); // 0=Sun
+  var mondayOffset=dow===0?-6:1-dow;
+  for(var i=0;i<7;i++){
+    var d=new Date(now);
+    d.setDate(now.getDate()+mondayOffset+i);
+    days.push(localDateStr(d));
+  }
+  return days;
+}
+function calcWeekAvg(){
+  var wt=getWeeklyTotals();
+  var days=currentWeekDays();
+  var scores=days.map(function(d){
+    return loggedData[d]?calcOverall(loggedData[d],wt):null;
+  }).filter(function(s){return s!==null;});
+  if(!scores.length) return null;
+  return Math.round(scores.reduce(function(a,b){return a+b;},0)/scores.length*10)/10;
+}
 
 function getWeeklyTotals() {
   var totals = {};
@@ -555,6 +589,8 @@ function renderCountdowns() {
 function renderToday() {
   var e = loggedData[today()]||{};
   var wt = getWeeklyTotals();
+
+  // Daily score badge
   var ov = calcOverall(e, wt);
   var oc = scoreColor(ov);
   var badge = document.getElementById('scoreBadge');
@@ -562,6 +598,17 @@ function renderToday() {
   var bval = document.getElementById('scoreBadgeVal');
   bval.style.color = ov!==null?oc:'var(--muted)';
   bval.textContent = ov!==null?ov:'—';
+
+  // Weekly score badge (Mon-Sun average of daily scores)
+  var weekBadge = document.getElementById('scoreBadgeWeek');
+  var weekVal = document.getElementById('scoreBadgeWeekVal');
+  if (weekBadge) {
+    var wa = calcWeekAvg();
+    var wc = scoreColor(wa);
+    weekBadge.style.borderColor = wa!==null?wc:'#bbb';
+    weekVal.style.color = wa!==null?wc:'var(--muted)';
+    weekVal.textContent = wa!==null?wa:'—';
+  }
 
   var nonGoal = settings.metrics.filter(function(m){return !m.isGoalMetric;});
   var html = '';
@@ -924,6 +971,8 @@ function renderEdit() {
         '<div class="form-row">'+
           '<div class="form-group"><label>Best value (10/10)</label><input type="number" id="medit-best-'+m.id+'" value="'+(m.best||'')+'" style="width:100px"></div>'+
           '<div class="form-group"><label>Worst value (1/10)</label><input type="number" id="medit-worst-'+m.id+'" value="'+(m.worst||'')+'" style="width:100px"></div>'+
+          '<div class="form-group"><label>Slider min</label><input type="number" id="medit-smin-'+m.id+'" value="'+(m.sliderMin!==undefined?m.sliderMin:'')+'" style="width:80px"></div>'+
+          '<div class="form-group"><label>Slider max</label><input type="number" id="medit-smax-'+m.id+'" value="'+(m.sliderMax!==undefined?m.sliderMax:'')+'" style="width:80px"></div>'+
         '</div>'+
       '</div>'+
       '<div id="medit-mid-'+m.id+'" style="'+(m.type==='middle'?'':'display:none')+'">'+
@@ -970,6 +1019,8 @@ function renderEdit() {
           '<span>Range ±: '+inp('range',m.range||15,'60px')+'</span>'
         )+
         '<span style="border-left:1px solid var(--border);padding-left:8px;">Goal line: '+inp('goal',m.goal!==undefined?m.goal:'','70px')+'</span>'+
+        '<span style="border-left:1px solid var(--border);padding-left:8px;">Slider min: '+inp('sliderMin',m.sliderMin!==undefined?m.sliderMin:'','70px')+'</span>'+
+        '<span>Slider max: '+inp('sliderMax',m.sliderMax!==undefined?m.sliderMax:'','70px')+'</span>'+
       '</div></div>'+
     '</div>';
   }).join('');
@@ -1007,6 +1058,10 @@ function saveMetricEdit(id){
       if(m.type==='directional'){
         m.best=parseFloat(document.getElementById('medit-best-'+id).value)||m.best;
         m.worst=parseFloat(document.getElementById('medit-worst-'+id).value)||m.worst;
+        var smin=document.getElementById('medit-smin-'+id);
+        var smax=document.getElementById('medit-smax-'+id);
+        if(smin&&smin.value!=='') m.sliderMin=parseFloat(smin.value);
+        if(smax&&smax.value!=='') m.sliderMax=parseFloat(smax.value);
       }
       if(m.type==='middle'){
         m.target=parseFloat(document.getElementById('medit-target-'+id).value)||m.target;
