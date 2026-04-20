@@ -438,6 +438,10 @@ function loadAll() {
     var s = JSON.parse(localStorage.getItem(SETTINGS_KEY)||'null');
     if (s && s.metrics && s.countdowns && s.goalBars) {
       settings = s;
+      // Filter out any null/undefined entries
+      settings.metrics = settings.metrics.filter(function(m){ return m !== null && m !== undefined; });
+      settings.goalBars = settings.goalBars.filter(function(g){ return g !== null && g !== undefined; });
+      settings.countdowns = settings.countdowns.filter(function(c){ return c !== null && c !== undefined; });
       // Migrate: add goal values to existing metrics if missing
       var goalDefaults={weightAM:122,weightPM:122,sleep:8,screenTime:1,calories:2000,bikeMiles:60};
       var sliderDefaults={weightAM:{sliderMin:100,sliderMax:200,step:0.5},weightPM:{sliderMin:100,sliderMax:200,step:0.5},sleep:{sliderMin:0,sliderMax:12,step:0.5},screenTime:{sliderMin:0,sliderMax:12,step:0.5},calories:{sliderMin:1000,sliderMax:4000,step:50},bikeMiles:{sliderMin:0,sliderMax:150,step:0.5}};
@@ -1332,11 +1336,20 @@ function setSyncStatus(s, msg) {
   el.textContent = msg || labels[s];
 }
 
-function syncFromSheet(callback) {
+function syncFromSheet(callback, retryCount) {
+  retryCount = retryCount || 0;
   setSyncStatus('syncing');
   apiCall({action:'getSettings', user:SYNC_USER}, function(err, res) {
     if (!err && res && res.success && res.settings && res.settings.metrics) {
       settings = res.settings;
+      // Filter out any null/undefined entries
+      settings.metrics = settings.metrics.filter(function(m){ return m !== null && m !== undefined; });
+      settings.goalBars = (settings.goalBars||[]).filter(function(g){ return g !== null && g !== undefined; });
+      settings.countdowns = (settings.countdowns||[]).filter(function(c){ return c !== null && c !== undefined; });
+      // Filter out any null/undefined metrics
+      settings.metrics = settings.metrics.filter(function(m){ return m !== null && m !== undefined; });
+      settings.goalBars = (settings.goalBars||[]).filter(function(g){ return g !== null && g !== undefined; });
+      settings.countdowns = (settings.countdowns||[]).filter(function(c){ return c !== null && c !== undefined; });
       var goalDefaults={weightAM:122,weightPM:122,sleep:8,screenTime:1,calories:2000,bikeMiles:60};
       var sliderDefaults={weightAM:{sliderMin:100,sliderMax:200,step:0.5},weightPM:{sliderMin:100,sliderMax:200,step:0.5},sleep:{sliderMin:0,sliderMax:12,step:0.5},screenTime:{sliderMin:0,sliderMax:12,step:0.5},calories:{sliderMin:1000,sliderMax:4000,step:50},bikeMiles:{sliderMin:0,sliderMax:150,step:0.5}};
       settings.metrics.forEach(function(m){
@@ -1344,6 +1357,10 @@ function syncFromSheet(callback) {
         if(m.sliderMin===undefined&&sliderDefaults[m.id]){m.sliderMin=sliderDefaults[m.id].sliderMin;m.sliderMax=sliderDefaults[m.id].sliderMax;m.step=sliderDefaults[m.id].step;}
       });
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    } else if (retryCount < 3) {
+      setSyncStatus('syncing', 'Warming up...');
+      setTimeout(function(){ syncFromSheet(callback, retryCount + 1); }, 5000);
+      return;
     }
     apiCall({action:'getData', user:SYNC_USER}, function(err2, res2) {
       if (!err2 && res2 && res2.success) {
