@@ -155,19 +155,17 @@ body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg2);fo
 .cal-sc{font-size:9px;font-weight:700;color:white;margin-top:5px;}
 
 /* LEADERBOARD */
-.lb-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px;}
-.lb-card{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:10px;text-align:center;}
-.lb-name{font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
-.lb-score{font-family:'Bebas Neue',sans-serif;font-size:36px;line-height:1;}
-.lb-unit{font-size:9px;color:var(--muted);}
-.lb-rank{font-size:9px;font-weight:700;margin-top:4px;}
-.lb-section{margin-bottom:12px;}
-.lb-section-title{font-size:9px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:6px;padding-bottom:4px;border-bottom:0.5px solid var(--border);}
-.lb-row{display:grid;grid-template-columns:1fr repeat(3,80px);gap:6px;align-items:center;padding:4px 0;border-bottom:0.5px solid var(--border);font-size:11px;}
-.lb-row:last-child{border-bottom:none;}
-.lb-row-label{font-weight:600;}
-.lb-val{text-align:center;font-weight:700;}
-.lb-val.top{color:#2DC653;}
+.lb-metric-block{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;margin-bottom:10px;}
+.lb-metric-label{font-size:18px;font-weight:500;color:var(--text);margin-bottom:14px;}
+.lb-cols{display:flex;gap:8px;align-items:flex-end;}
+.lb-mc-1{flex:1.4;text-align:center;padding:16px 8px;border-radius:var(--radius);background:#2DC65322;}
+.lb-mc-2{flex:1.15;text-align:center;padding:12px 8px;border-radius:var(--radius);background:var(--bg2);}
+.lb-mc-3{flex:1;text-align:center;padding:9px 8px;border-radius:var(--radius);background:var(--bg2);}
+.lb-mc-name{font-size:12px;font-weight:700;margin-bottom:6px;}
+.lb-mc-val-1{font-size:40px;font-weight:700;line-height:1;color:#2DC653;}
+.lb-mc-val-2{font-size:30px;font-weight:700;line-height:1;color:var(--text);}
+.lb-mc-val-3{font-size:22px;font-weight:700;line-height:1;color:var(--text);}
+.lb-mc-unit{font-size:11px;color:var(--muted);margin-top:3px;}
 
 /* GROUP NOTES */
 .notes-section{background:var(--bg);border:0.5px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;}
@@ -318,19 +316,20 @@ body{font-family:'DM Sans',sans-serif;color:var(--text);background:var(--bg2);fo
     </div>
 
     <div class="sec" id="s-leaderboard">
-      <div id="leaderboardContent" style="margin-bottom:16px;"><div style="font-size:11px;color:var(--muted);padding:20px;text-align:center;">Loading leaderboard...</div></div>
       <div class="notes-section">
-        <div style="font-size:11px;font-weight:700;letter-spacing:0.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Group Notes</div>
-        <div class="notes-tabs">
-          <button class="notes-tab active" id="notesTabActive" onclick="notesView='active';renderNotes()">Active</button>
-          <button class="notes-tab" id="notesTabOld" onclick="notesView='old';renderNotes()">Archived</button>
-        </div>
         <div id="notesList"></div>
-        <div class="note-add">
+        <div class="note-compose">
           <textarea id="noteInput" placeholder="Write a note to the group..."></textarea>
-          <button class="note-add-btn" onclick="addNote()">Post</button>
+          <button onclick="addNote()">Post</button>
+        </div>
+        <div class="notes-footer">
+          <div class="notes-tabs">
+            <button class="notes-tab active" id="notesTabActive" onclick="notesView='active';renderNotes()">Active</button>
+            <button class="notes-tab" id="notesTabOld" onclick="notesView='old';renderNotes()">Archived</button>
+          </div>
         </div>
       </div>
+      <div id="leaderboardContent"><div style="font-size:11px;color:var(--muted);padding:20px;text-align:center;">Loading leaderboard...</div></div>
     </div>
 
     <div class="sec" id="s-edit">
@@ -1178,25 +1177,34 @@ function buildLeaderboard(users, userMaps) {
   }
 
   var metrics = [
-    {label:'Cycling', unit:'mi', fn:function(m){return sumMetric(m,['bikeMiles','cycling','bike']);}},
-    {label:'Running', unit:'mi', fn:function(m){return sumMetric(m,['run','running']);}},
-    {label:'Logging Streak', unit:'days', fn:streak},
-    {label:'7 Day Score', unit:'', fn:avgOverall7}
+    {label:'🚴 Cycling', unit:'mi', fn:function(m){return sumMetric(m,['bikeMiles','cycling','bike']);}},
+    {label:'🏃 Running', unit:'mi', fn:function(m){return sumMetric(m,['run','running']);}},
+    {label:'✏️ Logging streak', unit:'days', fn:streak},
+    {label:'📅 7 day score', unit:'', fn:avgOverall7}
   ];
 
   var html = '';
+  var metricEmojis = {'🚴 Cycling':'🚴','🏃 Running':'🏃','✏️ Logging streak':'✏️','📅 7 day score':'📅'};
   metrics.forEach(function(metric){
     var vals = users.map(function(u,ui){ return metric.fn(userMaps[ui]); });
     var validVals = vals.filter(function(v){return v!==null;});
     var max = validVals.length ? Math.max.apply(null,validVals) : null;
-    html += '<div class="lb-section">';
-    html += '<div class="lb-section-title">'+metric.label+(metric.unit?' ('+metric.unit+')':'')+'</div>';
-    html += '<div class="lb-row"><div class="lb-row-label"></div>';
-    users.forEach(function(u){ html += '<div class="lb-val" style="color:'+u.color+';font-size:10px;">'+( u.displayName||u.name)+'</div>'; });
-    html += '</div><div class="lb-row"><div class="lb-row-label">Value</div>';
-    vals.forEach(function(v,vi){
-      var isTop = v!==null && v===max && max>0;
-      html += '<div class="lb-val'+(isTop?' top':'')+'">'+(v!==null?v+(metric.unit?' '+metric.unit:''):'—')+'</div>';
+    // Sort users by value descending
+    var ranked = users.map(function(u,ui){ return {u:u, v:vals[ui]}; });
+    ranked.sort(function(a,b){ return (b.v||0)-(a.v||0); });
+    var valClasses = ['lb-mc-val-1','lb-mc-val-2','lb-mc-val-3'];
+    var colClasses = ['lb-mc-1','lb-mc-2','lb-mc-3'];
+    html += '<div class="lb-metric-block">';
+    html += '<div class="lb-metric-label">'+metric.label+'</div>';
+    html += '<div class="lb-cols">';
+    ranked.forEach(function(item, ri){
+      var v = item.v;
+      var disp = v!==null ? (v+(metric.unit?' '+metric.unit:'')) : '—';
+      html += '<div class="'+colClasses[ri]+'">';
+      html += '<div class="lb-mc-name" style="color:'+item.u.color+'">'+( item.u.displayName||item.u.name)+'</div>';
+      html += '<div class="'+valClasses[ri]+'">'+disp+'</div>';
+      html += '<div class="lb-mc-unit">'+(ri===0?'':'')+'</div>';
+      html += '</div>';
     });
     html += '</div></div>';
   });
