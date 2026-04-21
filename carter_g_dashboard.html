@@ -630,17 +630,17 @@ function getScoreFormula() {
 }
 
 // ─── DATE HELPERS ────────────────────────────────────────────────
-function today(){ return new Date().toISOString().slice(0,10); }
+function today(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function dback(n) {
   if (n===9999) {
     var keys=Object.keys(loggedData).filter(function(k){return k.match(/^\d{4}-\d{2}-\d{2}$/);}).sort();
     if(!keys.length) return [today()];
     var start=new Date(keys[0]+'T12:00:00'),end=new Date(),days=[];
-    for(var d=new Date(start);d<=end;d.setDate(d.getDate()+1)) days.push(new Date(d).toISOString().slice(0,10));
+    for(var d=new Date(start);d<=end;d.setDate(d.getDate()+1)) var nd=new Date(d);days.push(nd.getFullYear()+'-'+String(nd.getMonth()+1).padStart(2,'0')+'-'+String(nd.getDate()).padStart(2,'0'));
     return days;
   }
   var days=[];
-  for(var i=n-1;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.toISOString().slice(0,10));}
+  for(var i=n-1;i>=0;i--){var d=new Date();d.setDate(d.getDate()-i);days.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));}
   return days;
 }
 function wdays(){ return calendarWeekDays(); }
@@ -652,7 +652,7 @@ function calendarWeekDays(){
   for(var i=0;i<7;i++){
     var d=new Date(now);
     d.setDate(now.getDate()+mondayOffset+i);
-    days.push(d.toISOString().slice(0,10));
+    days.push(d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'));
   }
   return days;
 }
@@ -681,13 +681,13 @@ function calcLoggingStreak() {
   if (!total) return 0;
   var streak = 0;
   var d = new Date();
-  var todayStr = d.toISOString().slice(0,10);
+  var todayStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
   var todayE = loggedData[todayStr]||{};
   var todayLogged = nonGoal.filter(function(m){return todayE[m.id]!==undefined&&todayE[m.id]!==null&&todayE[m.id]!=='';}).length;
   if (todayLogged/total >= 0.9) streak++;
   d.setDate(d.getDate()-1);
   for (var i=0;i<364;i++) {
-    var ds = d.toISOString().slice(0,10);
+    var ds = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     var e = loggedData[ds]||{};
     var logged = nonGoal.filter(function(m){return e[m.id]!==undefined&&e[m.id]!==null&&e[m.id]!=='';}).length;
     if (logged/total >= 0.9) { streak++; d.setDate(d.getDate()-1); } else break;
@@ -709,7 +709,7 @@ function switchTodoTab(tab) {
 
 function getLastSunday() {
   var d = new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate() - d.getDay());
-  return d.toISOString().slice(0,10);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
 function renderTodos() {
@@ -1195,13 +1195,13 @@ function buildLeaderboard(users, userMaps) {
   function streak(map) {
     var s = 0;
     var d = new Date();
-    var todayStr = d.toISOString().slice(0,10);
+    var todayStr = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
     var todayE = map[todayStr]||{};
     var todayHas = Object.keys(todayE).filter(function(k){return k!=='date'&&k!=='savedAt'&&k!=='overall'&&!k.startsWith('note_')&&todayE[k]!==''&&todayE[k]!==null&&todayE[k]!==undefined;}).length;
     if (todayHas > 0) s++;
     d.setDate(d.getDate()-1);
     for (var i=0;i<364;i++){
-      var ds=d.toISOString().slice(0,10);
+      var ds=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
       var e=map[ds]||{};
       var has=Object.keys(e).filter(function(k){return k!=='date'&&k!=='savedAt'&&k!=='overall'&&!k.startsWith('note_')&&e[k]!==''&&e[k]!==null&&e[k]!==undefined;}).length;
       if(has>0){s++;d.setDate(d.getDate()-1);}else break;
