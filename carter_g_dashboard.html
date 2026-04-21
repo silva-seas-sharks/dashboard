@@ -899,7 +899,8 @@ function renderLog() {
       html+='<div class="srow">'+
         '<input type="range" min="'+(m.sliderMin||300)+'" max="'+(m.sliderMax||660)+'" step="'+(m.step||15)+'" value="'+cur+'" id="slider_'+m.id+'" data-id="'+m.id+'" oninput="updLog(this.dataset.id,+this.value);">'+
         '<div class="sval" id="sv_'+m.id+'" style="color:'+(touched?c:'var(--muted)')+'">'+(touched?minutesToTimeStr(cur):'—')+'</div>'+
-      '</div>';
+      '</div>'+
+      '<input type="number" id="ni_'+m.id+'" data-id="'+m.id+'" placeholder="Minutes since midnight (e.g. 450=7:30am)" style="width:100%;padding:3px 6px;font-size:11px;border:0.5px solid var(--border);border-radius:5px;background:var(--bg2);color:var(--text);" oninput="updLog(this.dataset.id,+this.value);var sl=document.getElementById(\'slider_'+m.id+'\');if(sl)sl.value=Math.min('+(m.sliderMax||660)+',Math.max('+(m.sliderMin||300)+',+this.value));">';
     } else {
       var cur=v!==undefined?v:(m.goal||m.best||0);
       var sliderMin=m.sliderMin!==undefined?m.sliderMin:0;
@@ -1367,6 +1368,8 @@ function renderEdit() {
           '<span>Target: '+inp('target',m.target)+'</span>'+
           '<span>Range ±: '+inp('range',m.range||15,'60px')+'</span>')+
         '<span style="border-left:1px solid var(--border);padding-left:8px;">Goal line: '+inp('goal',m.goal!==undefined?m.goal:'','70px')+'</span>'+
+        '<span style="border-left:1px solid var(--border);padding-left:8px;">Slider min: '+inp('sliderMin',m.sliderMin!==undefined?m.sliderMin:'','65px')+'</span>'+
+        '<span>Slider max: '+inp('sliderMax',m.sliderMax!==undefined?m.sliderMax:'','65px')+'</span>'+
       '</div></div></div>';
   }).join('');
   document.getElementById('editThresholds').innerHTML=thHtml;
