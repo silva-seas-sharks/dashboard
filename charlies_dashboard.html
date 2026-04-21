@@ -1334,6 +1334,8 @@ function renderEdit() {
           '<span>Target: '+inp('target',m.target)+'</span>'+
           '<span>Range ±: '+inp('range',m.range||15,'60px')+'</span>')+
         '<span style="border-left:1px solid var(--border);padding-left:8px;">Goal line: '+inp('goal',m.goal!==undefined?m.goal:'','70px')+'</span>'+
+        '<span style="border-left:1px solid var(--border);padding-left:8px;">Slider min: '+inp('sliderMin',m.sliderMin!==undefined?m.sliderMin:'','65px')+'</span>'+
+        '<span>Slider max: '+inp('sliderMax',m.sliderMax!==undefined?m.sliderMax:'','65px')+'</span>'+
       '</div></div></div>';
   }).join('');
   document.getElementById('editThresholds').innerHTML=thHtml;
